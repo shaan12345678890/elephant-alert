@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Elephant Alert — Quick Village App</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;margin:0;padding:16px;background:#f7fafc;color:#0f172a}
+    h1{font-size:20px;margin-bottom:6px}
+    p{margin-top:0;margin-bottom:12px}
+    .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 6px rgba(15,23,42,.06)}
+    button{display:inline-block;padding:10px 14px;margin:6px 4px;border-radius:8px;border:0;background:#0ea5a4;color:#fff;font-weight:600}
+    input[type=file]{display:block;margin:6px 0}
+    .small{font-size:13px;color:#475569}
+    .note{background:#fffbeb;padding:8px;border-radius:6px;margin-top:12px}
+    .output{word-break:break-word;background:#eef2ff;padding:8px;border-radius:6px;margin-top:10px}
+  </style>
+</head>
+<body>
+  <h1>Elephant Alert — Quick App</h1>
+  <div class="card">
+    <p class="small">यह छोटा वेब-ऐप गाँव वालों के लिए बनाया गया है: फ़ोटो लें, लोकेशन पकड़ें और WhatsApp पर एक टैप में अलर्ट खोलें। (Photo को WhatsApp में Attach करना रहेगा — नीचे बताया गया है)</p>
+
+    <label class="small">1) फोटो या वीडियो चुनें (या कैमरा से लें)</label>
+    <input id="photo" type="file" accept="image/*,video/*" capture="environment">
+
+    <div style="margin-top:8px">
+      <button id="locBtn">Get Current Location</button>
+      <button id="composeBtn">Compose WhatsApp Alert</button>
+    </div>
+
+    <div id="status" class="small" style="margin-top:8px">Status: Ready</div>
+
+    <div id="output" class="output small">Message preview will appear here.</div>
+
+    <div class="note small">How to use after "Open WhatsApp": When WhatsApp opens, <b>attach the photo</b> you selected and then send. This app pre-fills the text including a Google Maps link so others can open it easily.</div>
+
+    <div style="margin-top:10px">
+      <button id="openBtn">Open WhatsApp</button>
+      <button id="copyBtn">Copy Message</button>
+    </div>
+
+  </div>
+
+  <script>
+    const locBtn = document.getElementById('locBtn');
+    const composeBtn = document.getElementById('composeBtn');
+    const openBtn = document.getElementById('openBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const status = document.getElementById('status');
+    const output = document.getElementById('output');
+    const photo = document.getElementById('photo');
+
+    let currentLat = null, currentLng = null;
+
+    locBtn.addEventListener('click',()=>{
+      status.textContent = 'Status: Getting location...';
+      if(!navigator.geolocation){ status.textContent = 'Status: Geolocation not supported'; return }
+      navigator.geolocation.getCurrentPosition(pos=>{
+        currentLat = pos.coords.latitude.toFixed(6);
+        currentLng = pos.coords.longitude.toFixed(6);
+        status.textContent = `Status: Location captured (${currentLat}, ${currentLng})`;
+        updatePreview();
+      }, err=>{
+        status.textContent = 'Status: Unable to get location — allow location permission';
+      }, {enableHighAccuracy:true, timeout:10000});
+    });
+
+    function updatePreview(){
+      const mapLink = currentLat ? `https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}` : '[Location not set]';
+      const fileName = (photo.files && photo.files[0]) ? photo.files[0].name : '[No photo selected]';
+      const text = `🚨 *Elephant Alert!*\nLocation: ${mapLink}\nArea: [describe area e.g. gaon ke pichla khet]\nPhoto: ${fileName}\nPlease stay safe and inform forest guards.`;
+      output.textContent = text;
+    }
+
+    composeBtn.addEventListener('click', ()=>{
+      status.textContent = 'Status: Composing message...';
+      updatePreview();
+      status.textContent = 'Status: Ready to open WhatsApp';
+    });
+
+    copyBtn.addEventListener('click', ()=>{
+      navigator.clipboard.writeText(output.textContent).then(()=>{
+        status.textContent = 'Status: Message copied to clipboard — open WhatsApp and paste';
+      }).catch(()=>{ status.textContent = 'Status: Copy failed — select and copy manually';});
+    });
+
+    openBtn.addEventListener('click', ()=>{
+      updatePreview();
+      const text = output.textContent;
+      // Use WhatsApp universal click-to-chat link. On mobile it will open WhatsApp app if installed.
+      const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+      status.textContent = 'Status: Opening WhatsApp...';
+      window.location.href = url;
+    });
+
+    // initial
+    updatePreview();
+
+  </script>
+</body>
+</html>
